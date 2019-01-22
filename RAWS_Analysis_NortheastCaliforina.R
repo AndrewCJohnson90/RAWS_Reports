@@ -165,16 +165,34 @@ z + geom_bar(position = "dodge",stat="identity",
   facet_grid(StationName ~ .  )+ ylab("Precipitation in Inches") + xlab("Year and Month")+
   theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(2000, 2019, 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = ""))
 
-InputStationName = "BULL FLAT"
-YearGreater = 2017
+InputStationName = "RAVENDALE"
+YearGreater = 2012
 
-#Chart for individual Stations
+#Chart for individual Stations and flexible dates
 y <- ggplot(data = MonthlySummary[which( MonthlySummary$StationName == InputStationName & MonthlySummary$year>YearGreater),],
             mapping = aes(x = as.factor(as.yearmon(YearMonth)), fill = StationName ))
 y + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+
-  ylab("Precipitation in Inches") + xlab("Year and Month")+
-  theme( axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
+  ylab("Precipitation in Inches") + xlab("Year and Month") +
+  theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
+
+#Chart for individual Stations and single month"
+x <- ggplot(data = MonthlySummary[which( MonthlySummary$StationName == InputStationName & MonthlySummary$month == "01"),],
+            mapping = aes(x = as.factor(as.yearmon(YearMonth)), fill = StationName ))
+x + geom_bar(position = "dodge",stat="identity",
+             mapping = aes(y = x))+
+  ylab("Precipitation in Inches") + xlab("Year and Month") +
+  theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
+
+#Chart for individual Station all months by year"
+w <- ggplot(data = MonthlySummary[which( MonthlySummary$StationName == InputStationName ),],
+            mapping = aes(x = as.factor(year), fill = StationName ))
+w + geom_bar(position = "dodge",stat="identity",
+             mapping = aes(y = x))+
+  facet_grid(month ~ .  )+ ylab("Precipitation in Inches") + xlab("Year and Month") +
+  theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
+
+
 
 
 
