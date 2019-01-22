@@ -1,4 +1,5 @@
 library(devtools)
+#Download fickse's mesowest package through github
 install_github('fickse/mesowest')
 library(mesowest)
 
@@ -12,28 +13,12 @@ file = curl::curl_download(paste("http://api.mesowest.net/v2/stations/timeseries
 #open .csv and remove the separate unit row, need to concatonate this somehow to title
 RAWSstation = read.csv(path,  header = T,sep = ",",quote = "",comment.char = "#")
 RAWSstation = RAWSstation[-1,]
-###
 
 
 ### This works for loading the data directly from the mesowest API, .csv is not saved locally
-path = "C:/Users/andrew/Documents/R/RAWS/RAWS_Output.csv"  #path to save .csv
-start = "201710010000"
-#Get current year: 
-CurrentYear = format(Sys.Date(), "%Y")
 
-#Get Current Month
-CurrentMonth = format(Sys.Date(), "%m")
-
-end=c(CurrentYear,CurrentMonth,'010000')
-stid ="BUFC1"
-file = curl::curl(paste("http://api.mesowest.net/v2/stations/timeseries?token=fa7799bb71314938921f8ec2b4b65c1d&stid=",stid,"&start=",start,"&end=",end,"&output=csv&units=english"))
-#Station = read.csv(file,  header = T,sep = ",",quote = "",comment.char = "#")
-#Station = Station[-1,]
-
-
-
-#####
-##
+# Sign up for Mesowest and recieve an API Key here: https://developers.synopticdata.com/signup/
+requestToken(apikey = "INSERTAPIKEY")
 
 #Get current year: 
 CurrentYear = format(Sys.Date(), "%Y")
@@ -41,9 +26,7 @@ CurrentYear = format(Sys.Date(), "%Y")
 #Get Current Month
 CurrentMonth = format(Sys.Date(), "%m")
 
-requestToken(apikey = "KzsQxP3c0dI4YX2Rs1wpYyz1hHKcvZujmBb")
-
-#Using functions from MWfunctions_modification.R in C:\Offline\RAWS\Mesowest_modification
+#Using functions from mesowest package: install_github('fickse/mesowest')
 #Ravendale - Missing 6/2011- 8/2011
 RVDC1_01_11 = mw(service = 'precipitation',stid='RVDC1',start='200107010000',end='201106010000',units='english',pmode="intervals", interval="month")
 RVDC1_01_11_DF = as.data.frame(RVDC1_01_11$STATION$OBSERVATIONS$precipitation)
