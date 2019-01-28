@@ -115,11 +115,31 @@ WaterYearSummary = AllStations %>%
   group_by_(.dots=c("StationName","waterYear")) %>% 
   summarize(x=sum(total))
 
+AnnualAvg = summary[summary$waterYear !=2001 & summary$waterYear !=2019,] %>% 
+  group_by_(.dots=c("Station")) %>% 
+  summarize(mean=mean(Sum))
+
+# get list of years excluding 2001 
+yearlist = summary[summary$waterYear !=2001,]
+yearList = unique(yearlist$waterYear)
+
+
 library(ggplot2)
 # line with each station and all years
 p <- ggplot(data = WaterYearSummary,
             mapping = aes(x = waterYear, color = StationName))+ xlab("Water Year")
 p + geom_line(mapping = aes(y = x),size = 1.5)+ ylab("Precipitation in Inches") 
+
+
+RawsPrecipTrunc <- RAWSPrecip[RAWSPrecip$year>2015,]  
+
+library(plyr)
+RawsPrecipTrunc$month<-revalue(factor(RawsPrecipTrunc$month), c("01" = "Jan", "02"="Feb", "03"="Mar", "04"="April","05"="May", "06"="Jun","07"="Jul", "08"="Aug","09"="Sep", "10"="Oct", "11" = "Nov", "12" = "Dec"))
+
+RawsPrecipTrunc$month<-factor(RawsPrecipTrunc$month, levels = c("Jan", "Feb", "Mar","April","May","Jun","Jul", "Aug","Sep", "Oct", "Nov", "Dec"))
+
+RawsPrecipTrunc$Station<-revalue(factor(RawsPrecipTrunc$Station), c("BUFC1" = "Bull Flat", "BUFN2"="Buffalo Creek", "DYLC1"="Doyle", "GRSC1"="Grasshopper","HDVC1"="Hidden Valley", "HLKC1"="Horse Lake","RVDC1"="Ravendale"))
+
 
 #Chart for each Station stacked vertically
 d <- ggplot(data = WaterYearSummary,
@@ -128,6 +148,28 @@ d + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+
              facet_grid(StationName ~ .  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
              theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(2000, 2019, 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = ""))
+
+
+#Chart for each Station stacked vertically limited to 2015 - ** Added from update
+d <- ggplot(data = RawsPrecipTrunc[complete.cases(RawsPrecipTrunc),],
+            mapping = aes(x = month, fill = Station ))
+d + geom_bar(position = "dodge",stat="identity",
+             mapping = aes(y = total))+
+  facet_grid(Station ~ year,scales = "free_x"  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
+  theme( axis.text.y=element_text(angle=45), axis.text.x=element_text(angle=45))+ ggtitle(paste("Monthly Precipitation(in) for RAWS Stations from 2016-2018"))
+
+
+
+
+#Chart for each Station stacked vertically** Added from update
+d <- ggplot(data = summary[summary$waterYear !=2001 & summary$waterYear !=2019,],
+            mapping = aes(x = waterYear, fill = Station ))
+d + geom_bar(position = "dodge",stat="identity",
+             mapping = aes(y = Sum))+
+             facet_grid(Station ~ .  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
+             theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(min(yearList), max(yearList), 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-2018"))+ 
+             geom_hline(aes(yintercept = mean), data = AnnualAvg)
+
 
 ## Chart for each year 
 c <- ggplot(data = WaterYearSummary,
@@ -148,6 +190,17 @@ g <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2012,],
             mapping = aes(x = StationName, fill = StationName))
 g + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x)) + ylab("Precipitation in Inches") + xlab("RAWS Station ID") +ggtitle(paste(2012,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
+
+
+## Loop through plots  ** Added from update
+for(i in yearList){
+  plot <-ggplot(data = summary[summary$waterYear == i,],
+              mapping = aes(x = reorder(Station,-Sum), fill = Station)) + geom_bar(position = "dodge",stat="identity",
+              mapping = aes(y = Sum))+ ylab("Precipitation in Inches") + xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds") + ggtitle(paste(i,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
+  print(plot)
+  
+}
+
 
 #Monthly Summary
 MonthlySummary = AllStations %>% 
@@ -191,8 +244,6 @@ w + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+
   facet_grid(month ~ .  )+ ylab("Precipitation in Inches") + xlab("Year and Month") +
   theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
-
-
 
 
 
