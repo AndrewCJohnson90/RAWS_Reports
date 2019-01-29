@@ -83,9 +83,10 @@ GRSC1 = as.data.frame(GRSC1All$STATION$OBSERVATIONS$precipitation)
 GRSC1$Station <- 'GRSC1'
 GRSC1$StationName <- GRSC1All$STATION$NAME
 
+#Merge all station data into single dataframe
 AllStations <-rbind(BUFC1,BUFN2,DYLC1_08_18_DF,DYLC1_00_06_DF,GRSC1,HDVC1_11_18_DF,HDVC1_07_10_DF,HLKC1_00_06_DF,HLKC1_06_18_DF,RVDC1_01_11_DF,RVDC1_11_18_DF)
 
-
+#Split out year and month from the first report date
 AllStationsSplit <- strsplit(AllStations$first_report, "-")
 
 AllStations$year <- sapply(AllStationsSplit, "[", 1)
@@ -111,34 +112,27 @@ AllStations$waterYear <- AllStationsWaterYear
 
 
 library(dplyr)
+#Summarize by water year
 WaterYearSummary = AllStations %>% 
   group_by_(.dots=c("StationName","waterYear")) %>% 
   summarize(x=sum(total))
 
-AnnualAvg = summary[summary$waterYear !=2001 & summary$waterYear !=2019,] %>% 
-  group_by_(.dots=c("Station")) %>% 
-  summarize(mean=mean(Sum))
+#Average Water Year Precip
+AnnualAvg = WaterYearSummary[WaterYearSummary$waterYear !=2001 & WaterYearSummary$waterYear !=2019,] %>% 
+  group_by_("StationName") %>% 
+  summarize(Avg=mean(x))
 
 # get list of years excluding 2001 
-yearlist = summary[summary$waterYear !=2001,]
+yearlist = WaterYearSummary[WaterYearSummary$waterYear !=2001,]
 yearList = unique(yearlist$waterYear)
 
 
 library(ggplot2)
 # line with each station and all years
-p <- ggplot(data = WaterYearSummary,
+c <- ggplot(data = WaterYearSummary,
             mapping = aes(x = waterYear, color = StationName))+ xlab("Water Year")
-p + geom_line(mapping = aes(y = x),size = 1.5)+ ylab("Precipitation in Inches") 
+c + geom_line(mapping = aes(y = x),size = 1.5)+ ylab("Precipitation in Inches") 
 
-
-RawsPrecipTrunc <- RAWSPrecip[RAWSPrecip$year>2015,]  
-
-library(plyr)
-RawsPrecipTrunc$month<-revalue(factor(RawsPrecipTrunc$month), c("01" = "Jan", "02"="Feb", "03"="Mar", "04"="April","05"="May", "06"="Jun","07"="Jul", "08"="Aug","09"="Sep", "10"="Oct", "11" = "Nov", "12" = "Dec"))
-
-RawsPrecipTrunc$month<-factor(RawsPrecipTrunc$month, levels = c("Jan", "Feb", "Mar","April","May","Jun","Jul", "Aug","Sep", "Oct", "Nov", "Dec"))
-
-RawsPrecipTrunc$Station<-revalue(factor(RawsPrecipTrunc$Station), c("BUFC1" = "Bull Flat", "BUFN2"="Buffalo Creek", "DYLC1"="Doyle", "GRSC1"="Grasshopper","HDVC1"="Hidden Valley", "HLKC1"="Horse Lake","RVDC1"="Ravendale"))
 
 
 #Chart for each Station stacked vertically
@@ -147,56 +141,36 @@ d <- ggplot(data = WaterYearSummary,
 d + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+
              facet_grid(StationName ~ .  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
-             theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(2000, 2019, 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = ""))
+             theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(2000, 2019, 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = "") + geom_hline(aes(yintercept = mean), data = AnnualAvg))
 
 
 #Chart for each Station stacked vertically limited to 2015 - ** Added from update
-d <- ggplot(data = RawsPrecipTrunc[complete.cases(RawsPrecipTrunc),],
-            mapping = aes(x = month, fill = Station ))
-d + geom_bar(position = "dodge",stat="identity",
+e <- ggplot(data = AllStations[AllStations$waterYear > 2016,],
+            mapping = aes(x = month, fill = StationName ))
+e + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = total))+
-  facet_grid(Station ~ year,scales = "free_x"  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
+  facet_grid(StationName ~ year,scales = "free_x"  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
   theme( axis.text.y=element_text(angle=45), axis.text.x=element_text(angle=45))+ ggtitle(paste("Monthly Precipitation(in) for RAWS Stations from 2016-2018"))
 
 
-
-
-#Chart for each Station stacked vertically** Added from update
-d <- ggplot(data = summary[summary$waterYear !=2001 & summary$waterYear !=2019,],
-            mapping = aes(x = waterYear, fill = Station ))
-d + geom_bar(position = "dodge",stat="identity",
-             mapping = aes(y = Sum))+
-             facet_grid(Station ~ .  )+ ylab("Precipitation in Inches") + xlab("Water Year")+
-             theme( axis.text.y=element_text(angle=45)) + scale_x_continuous(breaks=seq(min(yearList), max(yearList), 2))+ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-2018"))+ 
-             geom_hline(aes(yintercept = mean), data = AnnualAvg)
-
-
-## Chart for each year 
-c <- ggplot(data = WaterYearSummary,
-            mapping = aes(x = factor(waterYear), fill = StationName))+
-            geom_bar(position = "dodge",stat="identity",
-            mapping = aes(y = x))+
-            facet_wrap(~ waterYear, ncol = 5, scales='free_x')+ ylab("Precipitation in Inches") + xlab("RAWS Station ID")+
-            theme( axis.text.y=element_text(angle=45))+ggtitle(paste("Annual Precipitation(in) for Water Year (Oct-Nov)"))
-
 ## individual chart for 2019 one color pallet
-f <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2019,],
+e <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2019,],
             mapping = aes(x = StationName, fill = StationName))
-f + geom_bar(position = "dodge",stat="identity",
+e + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+ ylab("Precipitation in Inches") + xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds")  # "Reds" is palette name
 
 ## individual chart for 2012 many colors
-g <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2012,],
+f <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2012,],
             mapping = aes(x = StationName, fill = StationName))
-g + geom_bar(position = "dodge",stat="identity",
+f + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x)) + ylab("Precipitation in Inches") + xlab("RAWS Station ID") +ggtitle(paste(2012,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
 
 
 ## Loop through plots  ** Added from update
 for(i in yearList){
-  plot <-ggplot(data = summary[summary$waterYear == i,],
-              mapping = aes(x = reorder(Station,-Sum), fill = Station)) + geom_bar(position = "dodge",stat="identity",
-              mapping = aes(y = Sum))+ ylab("Precipitation in Inches") + xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds") + ggtitle(paste(i,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
+  plot <-ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == i,],
+              mapping = aes(x = reorder(StationName,-x), fill = StationName)) + geom_bar(position = "dodge",stat="identity",
+              mapping = aes(y = x))+ ylab("Precipitation in Inches") + xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds") + ggtitle(paste(i,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
   print(plot)
   
 }
