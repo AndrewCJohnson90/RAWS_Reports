@@ -4,9 +4,21 @@ install_github('fickse/mesowest')
 library(mesowest)
 
 ### Script for loading data directly from the mesowest API, .csv is not saved locally
+### Things to do: 
+### Standardize naming of graphs and documentation
+### Document data gaps - display within graph
+### Include map of sites
+### Develop Shiny Report
+### Automate export of reports
+### Export CSV of AllStations and WaterYearSummary
+
 
 # Sign up for Mesowest and recieve an API Key here: https://developers.synopticdata.com/signup/
 requestToken(apikey = "KzsQxP3c0dI4YX2Rs1wpYyz1hHKcvZujmBb")
+
+#Output Path must end with "/"
+OutputPath = "//blm/dfs/ca/pub/gisimage/el/gis/project/GIS/Scripts/R/Mesowest_modification/Outputs/Automated/"
+
 
 #Get current year: 
 CurrentYear = format(Sys.Date(), "%Y")
@@ -110,10 +122,15 @@ wtr_yr <- function(dates, start_month = 10){
 }                      
 AllStationsWaterYear <- wtr_yr(AllStations$first_report)
 AllStations$waterYear <- AllStationsWaterYear
+AllStations$YearMonth <- as.yearmon(paste(AllStations$year, AllStations$month), "%Y %m")
 
 
 library(dplyr)
-#Summarize by water year
+
+
+###
+###Summarize by water year
+###
 WaterYearSummary = AllStations %>% 
   group_by_(.dots=c("StationName","waterYear")) %>% 
   summarize(x=sum(total))
@@ -152,77 +169,63 @@ b + geom_bar(position = "dodge",stat="identity",
             ggtitle(paste("Annual Water Year Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = "")) +
             theme(strip.text.y = element_text(size = 6,  angle = 90))
 
-            
-#Chart for each Station stacked vertically - Free y axis - slightly misleading 
-b <- ggplot(data = WaterYearSummary,
-            mapping = aes(x = waterYear, fill = StationName ))
-b + geom_bar(position = "dodge",stat="identity",
-             mapping = aes(y = x))+
-  facet_grid(StationName ~ . , scales = "free_y" )+
-  geom_hline(aes(yintercept = Avg), colour="Black", lty=3) +
-  ylab("Precipitation in Inches") +
-  xlab("Water Year") + 
-  theme( axis.text.y=element_text(angle=45))+
-  scale_x_continuous(breaks=seq(2000, 2019, 2)) +
-  ggtitle(paste("Annual Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = ""))
-
-#Chart for each Station stacked vertically limited to 2015 - ** Added from update
-c <- ggplot(data = AllStations[AllStations$year > 2016,],mapping = aes(x = month, fill = StationName))
-c + geom_bar(position = "dodge",stat="identity",
-            mapping = aes(y = total))+
-            facet_grid(StationName ~ year ) + 
-            ylab("Precipitation in Inches") + 
-            xlab("Month")+
-            theme( axis.text.y=element_text(angle=45), axis.text.x=element_text(angle=45))+
-            ggtitle(paste("Monthly Precipitation(in) for RAWS Stations from 2017-2018"))+ 
-            theme(strip.text.y = element_text(size = 6,  angle = 90))
-
-
-## individual chart for 2019 one color pallet
-d <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2019,],
-            mapping = aes(x = StationName, fill = StationName))
-d + geom_bar(position = "dodge",stat="identity",
-             mapping = aes(y = x))+ 
-             ylab("Precipitation in Inches") + 
-             xlab("RAWS Station") + 
-             scale_fill_brewer(palette="Reds") + # "Reds" is palette name
-             ggtitle(paste("Annual Precipitation (in) for Water Year (Oct-Nov)",2019))
-
 ## individual chart for 2012 many colors
 e <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2012,],
             mapping = aes(x = StationName, fill = StationName))
 e + geom_bar(position = "dodge",stat="identity", mapping = aes(y = x)) + 
              ylab("Precipitation in Inches") + 
              xlab("RAWS Station") +
-             ggtitle(paste("Annual Precipitation (in) for Water Year (Oct-Nov)",2012))
-
+             ggtitle(paste("Annual Precipitation (in) for Water Year (Oct-Nov)",2012))+
+             theme(axis.text.x = element_text(size = 6,  angle = 0))
 
 ## Loop through plots - Creates one chart for each year that has the water year summary for all stations  ** Added from update
 for(i in yearList){
   plot <-ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == i,],
               mapping = aes(x = StationName, fill = StationName)) + geom_bar(position = "dodge",stat="identity",
-              mapping = aes(y = x))+ ylab("Precipitation in Inches") + xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds") + ggtitle(paste(i,": Annual Precipitation (in) for Water Year (Oct-Nov)"))
-  print(plot)
-  
+              mapping = aes(y = x))+ 
+              ylab("Precipitation in Inches") + 
+              xlab("RAWS Station ID") + scale_fill_brewer(palette="Reds") + 
+              ggtitle(paste(i,": Annual Precipitation (in) for Water Year (Oct-Nov)"))+
+              theme( axis.text.x=element_text(angle=45))+
+  jpeg( filename= paste(OutputPath,i," Annual Precipitation for Water Year Oct to Nov",".jpeg" ,sep = ""))
+  plot(plot)
+  dev.off()
 }
 
 
-#Monthly Summary
+###
+###Summarize by water year
+###
+
+#calculates a monthly summary only using the actual year (not the water year)
 MonthlySummary = AllStations %>% 
   group_by_(.dots=c("StationName","year","month")) %>% 
   summarize(x=sum(total)) 
   
-
+#Calculates a monthly average for a given station
 MonthlyAvg = MonthlySummary %>% 
   group_by_(.dots=c("StationName")) %>% 
   summarize(MonthAvg=mean(x)) 
 
+#Joins the average monthly precipitation onto the monthly summary
 MonthlySummary = left_join(MonthlySummary,MonthlyAvg,"StationName")
 
+#this package helps handle the year month data type- it is unique... 
 library(zoo)
 MonthlySummary$YearMonth <- as.yearmon(paste(MonthlySummary$year, MonthlySummary$month), "%Y %m")
 
 
+#Chart for each Station stacked vertically limited to year i.e: 2015 
+v <- ggplot(data = MonthlySummary[MonthlySummary$year > 2016,],mapping = aes(x = month, fill = StationName))
+
+v + geom_bar(position = "dodge",stat="identity",
+            mapping = aes(y = x))+
+            facet_grid(StationName ~ year ) + 
+            ylab("Precipitation in Inches") + 
+            xlab("Month")+
+            theme( axis.text.y=element_text(angle=45), axis.text.x=element_text(angle=45))+
+            ggtitle(paste("Monthly Precipitation(in) for RAWS Stations from 2017-2018"))+ 
+            theme(strip.text.y = element_text(size = 6,  angle = 90))
 
 #Chart for each Station stacked vertically
 z <- ggplot(data = MonthlySummary,
@@ -266,9 +269,17 @@ w <- ggplot(data = MonthlySummary[which( MonthlySummary$StationName == InputStat
             mapping = aes(x = as.factor(year), fill = StationName ))
 w + geom_bar(position = "dodge",stat="identity",
              mapping = aes(y = x))+
-  facet_grid(month ~ .  )+ ylab("Precipitation in Inches") + xlab("Year and Month") +
-  theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
+             facet_grid(month ~ .  )+ 
+             ylab("Precipitation in Inches") + 
+             xlab("Year and Month") +
+             theme( axis.text.x=element_text(angle=45), axis.text.y=element_text(angle=45)) + scale_x_discrete()+ggtitle(paste("Annual Precipitation(in) for ",InputStationName," RAWS Stations from ",(YearGreater + 1)," - ", CurrentYear,sep = ""))
 
+
+###
+### export csv
+###
+
+write.csv(AllStations, file = paste(OutputPath,"AllStations.csv",sep = ""))
 
 
 ### workflow for downloading a .csv of all hourly submissions for a single RAWS station with the MesoWest API and then loading it into R
