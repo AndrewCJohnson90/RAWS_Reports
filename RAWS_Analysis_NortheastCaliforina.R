@@ -25,8 +25,9 @@ CurrentYear = format(Sys.Date(), "%Y")
 
 #Get Current Month
 CurrentMonth = format(Sys.Date(), "%m")
+CurrentDay = format(Sys.Date(),"%d")
 
-CurrentEndDate = paste(CurrentYear,CurrentMonth,'310000',sep = "")
+CurrentEndDate = paste(CurrentYear,CurrentMonth,CurrentDay,'0000',sep = "")
 
 #Using functions from mesowest package: install_github('fickse/mesowest')
 #Ravendale - Missing 6/2011- 8/2011
@@ -103,6 +104,7 @@ AllStationsSplit <- strsplit(AllStations$first_report, "-")
 
 AllStations$year <- sapply(AllStationsSplit, "[", 1)
 AllStations$month <- sapply(AllStationsSplit, "[", 2)
+library(lubridate)
 AllStations$monthabb <- month.abb[month(as.Date(AllStations$first_report))]
 
 AllStations <- AllStations[complete.cases(AllStations),]
@@ -122,6 +124,7 @@ wtr_yr <- function(dates, start_month = 10){
 }                      
 AllStationsWaterYear <- wtr_yr(AllStations$first_report)
 AllStations$waterYear <- AllStationsWaterYear
+library(zoo)
 AllStations$YearMonth <- as.yearmon(paste(AllStations$year, AllStations$month), "%Y %m")
 
 
@@ -169,13 +172,13 @@ b + geom_bar(position = "dodge",stat="identity",
             ggtitle(paste("Annual Water Year Precipitation(in) for RAWS Stations from 2000-", CurrentYear,sep = "")) +
             theme(strip.text.y = element_text(size = 6,  angle = 90))
 
-## individual chart for 2012 many colors
-e <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2012,],
+## individual chart for 2019 many colors
+e <- ggplot(data = WaterYearSummary[WaterYearSummary$waterYear == 2019,],
             mapping = aes(x = StationName, fill = StationName))
 e + geom_bar(position = "dodge",stat="identity", mapping = aes(y = x)) + 
              ylab("Precipitation in Inches") + 
              xlab("RAWS Station") +
-             ggtitle(paste("Annual Precipitation (in) for Water Year (Oct-Nov)",2012))+
+             ggtitle(paste("Annual Precipitation (in) for Water Year (Oct-Nov)",2019))+
              theme(axis.text.x = element_text(size = 6,  angle = 0))
 
 ## Loop through plots - Creates one chart for each year that has the water year summary for all stations  ** Added from update
@@ -241,8 +244,8 @@ z + geom_bar(position = "dodge",stat="identity",
             geom_hline(aes(yintercept = MonthAvg), colour="Black", lty=3)+
             theme(strip.text.y = element_text(size = 6,  angle = 90))
 
-InputStationName = "RAVENDALE"
-YearGreater = 2016
+InputStationName = "HIDDEN VALLEY"
+YearGreater = 2018
 
 #Chart for individual Stations and flexible dates
 y <- ggplot(data = MonthlySummary[which( MonthlySummary$StationName == InputStationName & MonthlySummary$year>YearGreater),],
